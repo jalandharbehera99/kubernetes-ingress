@@ -1,11 +1,11 @@
 import grpc
 import pytest
 import time
-from kubernetes.client.rest import ApiException
 
 from settings import TEST_DATA, DEPLOYMENTS
 from suite.custom_assertions import assert_event_starts_with_text_and_contains_errors, \
-    assert_grpc_entries_exist, assert_proxy_entries_do_not_exist, assert_vs_conf_not_exists
+    assert_grpc_entries_exist, assert_proxy_entries_do_not_exist, \
+    assert_vs_conf_not_exists, assert_event
 from suite.grpc.helloworld_pb2 import HelloRequest
 from suite.grpc.helloworld_pb2_grpc import GreeterStub
 from suite.resources_utils import create_example_app, wait_until_all_pods_are_ready, \
@@ -185,6 +185,21 @@ class TestVirtualServerGrpc:
                                             ic_pod_name,
                                             ingress_controller_prerequisites.namespace)
         assert 'grpc_pass grpcs://' in config
+
+    @pytest.mark.ciara
+    @pytest.mark.parametrize("backend_setup", [{"app_type": "grpc-vs"}], indirect=True)
+    def test_config_error_page_warning(self, kube_apis, ingress_controller_prerequisites, crd_ingress_controller, 
+                                       backend_setup, virtual_server_setup):
+        text = f"{virtual_server_setup.namespace}/{virtual_server_setup.vs_name}"
+        vs_event_warning_text = f"Configuration for {text} was added or updated ; with warning(s): The error page"
+        patch_virtual_server_from_yaml(kube_apis.custom_objects,
+                                        virtual_server_setup.vs_name,
+                                        f"{TEST_DATA}/virtual-server-grpc/virtual-server-error-page.yaml",
+                                        virtual_server_setup.namespace)
+        wait_before_test(30)
+
+        events = get_events(kube_apis.v1, virtual_server_setup.namespace)
+        assert_event(vs_event_warning_text, events)
 
 
 @pytest.mark.vs
