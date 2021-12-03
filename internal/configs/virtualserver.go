@@ -594,7 +594,7 @@ func (vsc *virtualServerConfigurator) GenerateVirtualServerConfig(
 				loc, returnLoc := generateLocation(r.Path, upstreamName, upstream, r.Action, vsc.cfgParams, errorPages, false,
 					errorPageIndex, proxySSLName, r.Path, locSnippets, vsc.enableSnippets, len(returnLocations), isVSR, vsr.Name, vsr.Namespace)
 				addPoliciesCfgToLocation(routePoliciesCfg, &loc)
-				addDosConfigToLocations(dosRouteCfg, []version2.Location{loc})
+				loc.Dos = dosRouteCfg
 
 				locations = append(locations, loc)
 				if returnLoc != nil {
